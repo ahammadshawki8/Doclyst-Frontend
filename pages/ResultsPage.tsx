@@ -1,9 +1,10 @@
-import React from 'react';
-import { CheckCircle, AlertCircle, Download, Sparkles, Shield, TrendingUp, TrendingDown, Minus, XCircle, ArrowRight, HelpCircle, GitCompare } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { CheckCircle, AlertCircle, Download, Sparkles, Shield, TrendingUp, TrendingDown, Minus, XCircle, ArrowRight, HelpCircle, GitCompare, Volume2, VolumeX } from 'lucide-react';
 import { ReportStatus, AnalysisResult, ComparisonItem, Language } from '../types';
 import Mascot from '../components/Mascot';
 import { generatePDF } from '../services/pdfGenerator';
 import { t } from '../services/translations';
+import { ttsPlayer } from '../services/ttsService';
 
 interface ResultsPageProps {
   result: AnalysisResult;
@@ -11,6 +12,63 @@ interface ResultsPageProps {
 }
 
 const ResultsPage: React.FC<ResultsPageProps> = ({ result, language }) => {
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  useEffect(() => {
+    // Set up TTS callbacks
+    ttsPlayer.onEnd(() => setIsSpeaking(false));
+    
+    return () => {
+      ttsPlayer.stop();
+    };
+  }, []);
+
+  const speakResults = async () => {
+    if (isSpeaking) {
+      ttsPlayer.stop();
+      setIsSpeaking(false);
+      return;
+    }
+
+    const textParts: string[] = [];
+    
+    // Add summary
+    if (result.summary) {
+      textParts.push(result.summary);
+    }
+
+    // Add test explanations
+    result.tests.forEach(test => {
+      textParts.push(`${test.name}: ${test.value}. ${test.explanation}`);
+    });
+
+    // Add anti-panic sections
+    if (result.doesNotMean && result.doesNotMean.length > 0) {
+      textParts.push(t(language, 'whatDoesNotMean'));
+      result.doesNotMean.forEach(item => textParts.push(item));
+    }
+
+    if (result.nextSteps && result.nextSteps.length > 0) {
+      textParts.push(t(language, 'whatToDoNext'));
+      result.nextSteps.forEach(step => textParts.push(step));
+    }
+
+    if (result.doctorQuestions && result.doctorQuestions.length > 0) {
+      textParts.push(t(language, 'questionsForDoctor'));
+      result.doctorQuestions.forEach(q => textParts.push(q));
+    }
+
+    const fullText = textParts.join('. ');
+    setIsSpeaking(true);
+    
+    try {
+      await ttsPlayer.speak(fullText, language);
+    } catch (error) {
+      console.error('TTS error:', error);
+      setIsSpeaking(false);
+    }
+  };
+
   const getStatusConfig = (status: ReportStatus) => {
     switch (status) {
       case ReportStatus.NORMAL:
@@ -334,8 +392,28 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ result, language }) => {
         </div>
       </div>
 
-      {/* Action Button */}
-      <div className="flex justify-center">
+      {/* Action Buttons */}
+      <div className="flex justify-center gap-3 sm:gap-4 flex-wrap">
+        <button 
+          onClick={speakResults}
+          className={`group flex items-center justify-center gap-2 sm:gap-3 font-bold py-3 sm:py-4 px-6 sm:px-10 rounded-full shadow-xl transition-all transform hover:scale-105 active:scale-95 text-sm sm:text-base ${
+            isSpeaking 
+              ? 'bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white shadow-rose-200' 
+              : 'bg-gradient-to-r from-mint-500 to-mint-400 hover:from-mint-600 hover:to-mint-500 text-white shadow-mint-200'
+          }`}
+        >
+          {isSpeaking ? (
+            <>
+              <VolumeX size={18} className="sm:w-5 sm:h-5" />
+              {t(language, 'stopReading')}
+            </>
+          ) : (
+            <>
+              <Volume2 size={18} className="sm:w-5 sm:h-5" />
+              {t(language, 'readAloud')}
+            </>
+          )}
+        </button>
         <button 
           onClick={() => generatePDF(result)}
           className="group flex items-center justify-center gap-2 sm:gap-3 bg-gradient-to-r from-slate-800 to-slate-700 hover:from-slate-700 hover:to-slate-600 text-white font-bold py-3 sm:py-4 px-6 sm:px-10 rounded-full shadow-xl shadow-slate-300 transition-all transform hover:scale-105 active:scale-95 text-sm sm:text-base"
