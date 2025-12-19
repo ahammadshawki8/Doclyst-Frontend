@@ -153,6 +153,188 @@ export function generatePDF(result: AnalysisResult): void {
     yPos += 5 + expLines.length * 4 + 5;
   });
 
+  // Comparison Results (if comparison mode)
+  if (result.isComparison && result.comparison) {
+    if (yPos > pageHeight - 50) {
+      doc.addPage();
+      yPos = margin;
+    }
+    yPos += 5;
+    doc.setTextColor(139, 92, 246); // purple
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Report Comparison', margin, yPos);
+    yPos += 8;
+
+    // Comparison Summary
+    if (result.comparison.comparisonSummary) {
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...textMuted);
+      const summLines = doc.splitTextToSize(result.comparison.comparisonSummary, contentWidth);
+      doc.text(summLines, margin, yPos);
+      yPos += summLines.length * 4 + 8;
+    }
+
+    // Improved
+    if (result.comparison.improved && result.comparison.improved.length > 0) {
+      if (yPos > pageHeight - 30) { doc.addPage(); yPos = margin; }
+      doc.setTextColor(16, 185, 129);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Improved (' + result.comparison.improved.length + ')', margin, yPos);
+      yPos += 6;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      result.comparison.improved.forEach((item) => {
+        if (yPos > pageHeight - 20) { doc.addPage(); yPos = margin; }
+        doc.setTextColor(...textDark);
+        doc.text(item.name + ': ' + item.oldValue + ' → ' + item.newValue, margin, yPos);
+        yPos += 5;
+      });
+      yPos += 3;
+    }
+
+    // Worsened
+    if (result.comparison.worsened && result.comparison.worsened.length > 0) {
+      if (yPos > pageHeight - 30) { doc.addPage(); yPos = margin; }
+      doc.setTextColor(239, 68, 68);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text('Needs Attention (' + result.comparison.worsened.length + ')', margin, yPos);
+      yPos += 6;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      result.comparison.worsened.forEach((item) => {
+        if (yPos > pageHeight - 20) { doc.addPage(); yPos = margin; }
+        doc.setTextColor(...textDark);
+        doc.text(item.name + ': ' + item.oldValue + ' → ' + item.newValue, margin, yPos);
+        yPos += 5;
+      });
+      yPos += 3;
+    }
+
+    // Stable
+    if (result.comparison.stable && result.comparison.stable.length > 0) {
+      if (yPos > pageHeight - 30) { doc.addPage(); yPos = margin; }
+      doc.setTextColor(...textMuted);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text('Stable (' + result.comparison.stable.length + ')', margin, yPos);
+      yPos += 6;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      result.comparison.stable.forEach((item) => {
+        if (yPos > pageHeight - 20) { doc.addPage(); yPos = margin; }
+        doc.setTextColor(...textDark);
+        doc.text(item.name + ': ' + item.newValue, margin, yPos);
+        yPos += 5;
+      });
+      yPos += 3;
+    }
+
+    // New Findings
+    if (result.comparison.newFindings && result.comparison.newFindings.length > 0) {
+      if (yPos > pageHeight - 30) { doc.addPage(); yPos = margin; }
+      doc.setTextColor(245, 158, 11);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text('New Findings (' + result.comparison.newFindings.length + ')', margin, yPos);
+      yPos += 6;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      result.comparison.newFindings.forEach((item) => {
+        if (yPos > pageHeight - 20) { doc.addPage(); yPos = margin; }
+        doc.setTextColor(...textDark);
+        doc.text(item.name + ': ' + item.newValue, margin, yPos);
+        yPos += 5;
+      });
+      yPos += 3;
+    }
+  }
+
+  // What This Does NOT Mean
+  if (result.doesNotMean && result.doesNotMean.length > 0) {
+    if (yPos > pageHeight - 50) {
+      doc.addPage();
+      yPos = margin;
+    }
+    yPos += 5;
+    doc.setTextColor(239, 68, 68); // rose color
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('What This Does NOT Mean', margin, yPos);
+    yPos += 8;
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...textMuted);
+    result.doesNotMean.forEach((item) => {
+      if (yPos > pageHeight - 20) {
+        doc.addPage();
+        yPos = margin;
+      }
+      const lines = doc.splitTextToSize('• ' + item, contentWidth);
+      doc.text(lines, margin, yPos);
+      yPos += lines.length * 4 + 3;
+    });
+  }
+
+  // What You Should Do Next
+  if (result.nextSteps && result.nextSteps.length > 0) {
+    if (yPos > pageHeight - 50) {
+      doc.addPage();
+      yPos = margin;
+    }
+    yPos += 5;
+    doc.setTextColor(16, 185, 129); // mint/green color
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('What You Should Do Next', margin, yPos);
+    yPos += 8;
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...textMuted);
+    result.nextSteps.forEach((step, idx) => {
+      if (yPos > pageHeight - 20) {
+        doc.addPage();
+        yPos = margin;
+      }
+      const lines = doc.splitTextToSize((idx + 1) + '. ' + step, contentWidth);
+      doc.text(lines, margin, yPos);
+      yPos += lines.length * 4 + 3;
+    });
+  }
+
+  // Questions to Ask Your Doctor
+  if (result.doctorQuestions && result.doctorQuestions.length > 0) {
+    if (yPos > pageHeight - 50) {
+      doc.addPage();
+      yPos = margin;
+    }
+    yPos += 5;
+    doc.setTextColor(139, 92, 246); // lavender/purple color
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Questions to Ask Your Doctor', margin, yPos);
+    yPos += 8;
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...textMuted);
+    result.doctorQuestions.forEach((question) => {
+      if (yPos > pageHeight - 20) {
+        doc.addPage();
+        yPos = margin;
+      }
+      const lines = doc.splitTextToSize('? ' + question, contentWidth);
+      doc.text(lines, margin, yPos);
+      yPos += lines.length * 4 + 3;
+    });
+  }
+
+  yPos += 5;
+
   // Footer
   const footerY = pageHeight - 15;
   doc.setDrawColor(226, 232, 240);
@@ -166,6 +348,8 @@ export function generatePDF(result: AnalysisResult): void {
   );
   doc.text('Doclyst', pageWidth - margin, footerY, { align: 'right' });
 
-  const fileName = 'Doclyst_Report_' + new Date().toISOString().split('T')[0] + '.pdf';
+  const fileName = result.isComparison 
+    ? 'Doclyst_Comparison_' + new Date().toISOString().split('T')[0] + '.pdf'
+    : 'Doclyst_Report_' + new Date().toISOString().split('T')[0] + '.pdf';
   doc.save(fileName);
 }

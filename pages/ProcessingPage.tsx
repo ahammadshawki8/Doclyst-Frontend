@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Mascot from '../components/Mascot';
+import { Language } from '../types';
+import { t } from '../services/translations';
 
-const ProcessingPage: React.FC = () => {
+interface ProcessingPageProps {
+  language: Language;
+}
+
+const ProcessingPage: React.FC<ProcessingPageProps> = ({ language }) => {
   const [msgIdx, setMsgIdx] = useState(0);
   const messages = [
     "Reading your report...",
@@ -25,9 +31,9 @@ const ProcessingPage: React.FC = () => {
       </div>
       
       <h3 className="text-2xl font-bold text-slate-800 mb-2 transition-all duration-500 h-8">
-        {messages[msgIdx]}
+        {t(language, 'processing')}
       </h3>
-      <p className="text-slate-400 font-body">This usually takes less than 30 seconds.</p>
+      <p className="text-slate-400 font-body">{t(language, 'pleaseWait')}</p>
       
       <div className="w-64 h-2 bg-slate-100 rounded-full mt-8 overflow-hidden">
         <div className="h-full bg-mint-400 rounded-full animate-[loading_2s_ease-in-out_infinite] w-1/3 origin-left"></div>

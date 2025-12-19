@@ -1,14 +1,16 @@
 import React from 'react';
-import { CheckCircle, AlertCircle, Download, Sparkles, Shield, TrendingUp, TrendingDown, Minus, XCircle, ArrowRight, HelpCircle } from 'lucide-react';
-import { ReportStatus, AnalysisResult } from '../types';
+import { CheckCircle, AlertCircle, Download, Sparkles, Shield, TrendingUp, TrendingDown, Minus, XCircle, ArrowRight, HelpCircle, GitCompare } from 'lucide-react';
+import { ReportStatus, AnalysisResult, ComparisonItem, Language } from '../types';
 import Mascot from '../components/Mascot';
 import { generatePDF } from '../services/pdfGenerator';
+import { t } from '../services/translations';
 
 interface ResultsPageProps {
   result: AnalysisResult;
+  language: Language;
 }
 
-const ResultsPage: React.FC<ResultsPageProps> = ({ result }) => {
+const ResultsPage: React.FC<ResultsPageProps> = ({ result, language }) => {
   const getStatusConfig = (status: ReportStatus) => {
     switch (status) {
       case ReportStatus.NORMAL:
@@ -17,7 +19,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ result }) => {
           border: 'border-mint-200',
           text: 'text-mint-700',
           icon: <CheckCircle className="w-8 h-8" />,
-          label: 'Everything looks good',
+          label: t(language, 'everythingLooksGood'),
           mascotState: 'happy' as const
         };
       case ReportStatus.ATTENTION:
@@ -26,7 +28,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ result }) => {
           border: 'border-amber-200',
           text: 'text-amber-700',
           icon: <AlertCircle className="w-8 h-8" />,
-          label: 'Needs a little attention',
+          label: t(language, 'needsAttention'),
           mascotState: 'idle' as const
         };
       case ReportStatus.URGENT:
@@ -35,7 +37,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ result }) => {
           border: 'border-rose-200',
           text: 'text-rose-700',
           icon: <AlertCircle className="w-8 h-8" />,
-          label: 'Please see a doctor soon',
+          label: t(language, 'seeDoctor'),
           mascotState: 'thinking' as const
         };
       default:
@@ -44,7 +46,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ result }) => {
           border: 'border-slate-200',
           text: 'text-slate-700',
           icon: <Minus className="w-8 h-8" />,
-          label: 'Analysis complete',
+          label: t(language, 'analysisComplete'),
           mascotState: 'idle' as const
         };
     }
@@ -79,7 +81,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ result }) => {
               {statusConfig.label}
             </h2>
             <p className="text-slate-500 font-body text-sm sm:text-base">
-              {normalCount} of {totalCount} tests within normal range
+              {normalCount} / {totalCount} {t(language, 'testsInRange')}
             </p>
           </div>
           <div className="relative">
@@ -93,21 +95,136 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ result }) => {
       <section className="mb-6 sm:mb-10">
         <div className="flex items-center gap-2 mb-3 sm:mb-4 ml-1 sm:ml-2">
           <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-mint-500" />
-          <h3 className="text-slate-800 font-bold text-lg sm:text-xl">Simple Summary</h3>
+          <h3 className="text-slate-800 font-bold text-lg sm:text-xl">
+            {result.isComparison ? t(language, 'comparisonSummary') : t(language, 'simpleSummary')}
+          </h3>
         </div>
         <div className="relative bg-white p-5 sm:p-8 rounded-2xl sm:rounded-[2rem] shadow-lg border border-slate-100 overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-mint-400 via-lavender-300 to-mint-400"></div>
+          <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${result.isComparison ? 'from-lavender-400 via-purple-300 to-lavender-400' : 'from-mint-400 via-lavender-300 to-mint-400'}`}></div>
           <p className="text-base sm:text-lg text-slate-600 leading-relaxed font-body">
             {result.summary}
           </p>
         </div>
       </section>
 
+      {/* Comparison Results */}
+      {result.isComparison && result.comparison && (
+        <section className="mb-6 sm:mb-10">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4 ml-1 sm:ml-2">
+            <GitCompare className="w-4 h-4 sm:w-5 sm:h-5 text-lavender-500" />
+            <h3 className="text-slate-800 font-bold text-lg sm:text-xl">{t(language, 'changesBetweenReports')}</h3>
+          </div>
+
+          {/* Comparison Summary */}
+          {result.comparison.comparisonSummary && (
+            <div className="bg-gradient-to-br from-lavender-50 to-purple-50 border border-lavender-200 p-4 sm:p-5 rounded-xl mb-4">
+              <p className="text-slate-700 font-body text-sm sm:text-base">{result.comparison.comparisonSummary}</p>
+            </div>
+          )}
+
+          <div className="grid gap-4">
+            {/* Improved */}
+            {result.comparison.improved && result.comparison.improved.length > 0 && (
+              <div className="bg-gradient-to-br from-mint-50 to-emerald-50 border border-mint-200 p-4 sm:p-5 rounded-xl sm:rounded-2xl">
+                <h4 className="font-bold text-mint-700 mb-3 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5" />
+                  {t(language, 'improved')} ({result.comparison.improved.length})
+                </h4>
+                <div className="space-y-3">
+                  {result.comparison.improved.map((item: ComparisonItem, idx: number) => (
+                    <div key={idx} className="bg-white/70 p-3 rounded-lg">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="font-semibold text-slate-800">{item.name}</span>
+                        <span className="text-xs bg-mint-100 text-mint-700 px-2 py-1 rounded-full">↑ Improved</span>
+                      </div>
+                      <div className="text-sm text-slate-500 mb-1">
+                        <span className="text-amber-600">{item.oldValue}</span>
+                        <span className="mx-2">→</span>
+                        <span className="text-mint-600 font-medium">{item.newValue}</span>
+                      </div>
+                      <p className="text-sm text-slate-600">{item.explanation}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Worsened */}
+            {result.comparison.worsened && result.comparison.worsened.length > 0 && (
+              <div className="bg-gradient-to-br from-rose-50 to-red-50 border border-rose-200 p-4 sm:p-5 rounded-xl sm:rounded-2xl">
+                <h4 className="font-bold text-rose-700 mb-3 flex items-center gap-2">
+                  <TrendingDown className="w-5 h-5" />
+                  {t(language, 'needsAttentionLabel')} ({result.comparison.worsened.length})
+                </h4>
+                <div className="space-y-3">
+                  {result.comparison.worsened.map((item: ComparisonItem, idx: number) => (
+                    <div key={idx} className="bg-white/70 p-3 rounded-lg">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="font-semibold text-slate-800">{item.name}</span>
+                        <span className="text-xs bg-rose-100 text-rose-700 px-2 py-1 rounded-full">↓ Changed</span>
+                      </div>
+                      <div className="text-sm text-slate-500 mb-1">
+                        <span className="text-slate-600">{item.oldValue}</span>
+                        <span className="mx-2">→</span>
+                        <span className="text-rose-600 font-medium">{item.newValue}</span>
+                      </div>
+                      <p className="text-sm text-slate-600">{item.explanation}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Stable */}
+            {result.comparison.stable && result.comparison.stable.length > 0 && (
+              <div className="bg-gradient-to-br from-slate-50 to-gray-50 border border-slate-200 p-4 sm:p-5 rounded-xl sm:rounded-2xl">
+                <h4 className="font-bold text-slate-700 mb-3 flex items-center gap-2">
+                  <Minus className="w-5 h-5" />
+                  {t(language, 'stable')} ({result.comparison.stable.length})
+                </h4>
+                <div className="space-y-2">
+                  {result.comparison.stable.map((item: ComparisonItem, idx: number) => (
+                    <div key={idx} className="bg-white/70 p-3 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-slate-700">{item.name}</span>
+                        <span className="text-sm text-slate-500">{item.newValue}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* New Findings */}
+            {result.comparison.newFindings && result.comparison.newFindings.length > 0 && (
+              <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 p-4 sm:p-5 rounded-xl sm:rounded-2xl">
+                <h4 className="font-bold text-amber-700 mb-3 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5" />
+                  {t(language, 'newInReport')} ({result.comparison.newFindings.length})
+                </h4>
+                <div className="space-y-3">
+                  {result.comparison.newFindings.map((item: ComparisonItem, idx: number) => (
+                    <div key={idx} className="bg-white/70 p-3 rounded-lg">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="font-semibold text-slate-800">{item.name}</span>
+                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full">New</span>
+                      </div>
+                      <div className="text-sm text-amber-600 font-medium mb-1">{item.newValue}</div>
+                      <p className="text-sm text-slate-600">{item.explanation}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* Test Breakdown */}
       <section className="mb-6 sm:mb-10">
         <div className="flex items-center gap-2 mb-3 sm:mb-4 ml-1 sm:ml-2">
           <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-mint-500" />
-          <h3 className="text-slate-800 font-bold text-lg sm:text-xl">Test Breakdown</h3>
+          <h3 className="text-slate-800 font-bold text-lg sm:text-xl">{t(language, 'testBreakdown')}</h3>
         </div>
         <div className="grid gap-3 sm:gap-4">
           {result.tests.map((test, idx) => (
@@ -135,7 +252,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ result }) => {
               </div>
               <p className="text-slate-500 mb-2 sm:mb-3 font-body leading-relaxed text-sm sm:text-base">{test.explanation}</p>
               <div className="flex items-center gap-2 text-xs text-slate-400 font-mono bg-slate-50 inline-flex px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-slate-100">
-                <span className="text-slate-500">Normal:</span>
+                <span className="text-slate-500">{t(language, 'normal')}:</span>
                 <span className="font-semibold text-slate-600">{test.range}</span>
               </div>
             </div>
@@ -148,7 +265,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ result }) => {
         <section className="mb-6 sm:mb-10">
           <div className="flex items-center gap-2 mb-3 sm:mb-4 ml-1 sm:ml-2">
             <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-rose-400" />
-            <h3 className="text-slate-800 font-bold text-lg sm:text-xl">What This Does NOT Mean</h3>
+            <h3 className="text-slate-800 font-bold text-lg sm:text-xl">{t(language, 'whatDoesNotMean')}</h3>
           </div>
           <div className="bg-gradient-to-br from-rose-50 to-orange-50 border border-rose-100 p-5 sm:p-6 rounded-2xl sm:rounded-[2rem]">
             <ul className="space-y-3">
@@ -168,7 +285,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ result }) => {
         <section className="mb-6 sm:mb-10">
           <div className="flex items-center gap-2 mb-3 sm:mb-4 ml-1 sm:ml-2">
             <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-mint-500" />
-            <h3 className="text-slate-800 font-bold text-lg sm:text-xl">What You Should Do Next</h3>
+            <h3 className="text-slate-800 font-bold text-lg sm:text-xl">{t(language, 'whatToDoNext')}</h3>
           </div>
           <div className="bg-gradient-to-br from-mint-50 to-emerald-50 border border-mint-100 p-5 sm:p-6 rounded-2xl sm:rounded-[2rem]">
             <ul className="space-y-3">
@@ -188,7 +305,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ result }) => {
         <section className="mb-6 sm:mb-10">
           <div className="flex items-center gap-2 mb-3 sm:mb-4 ml-1 sm:ml-2">
             <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 text-lavender-500" />
-            <h3 className="text-slate-800 font-bold text-lg sm:text-xl">Questions to Ask Your Doctor</h3>
+            <h3 className="text-slate-800 font-bold text-lg sm:text-xl">{t(language, 'questionsForDoctor')}</h3>
           </div>
           <div className="bg-gradient-to-br from-lavender-50 to-purple-50 border border-lavender-100 p-5 sm:p-6 rounded-2xl sm:rounded-[2rem]">
             <ul className="space-y-3">
@@ -210,7 +327,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ result }) => {
           <AlertCircle className="text-slate-500 w-4 h-4 sm:w-5 sm:h-5" />
         </div>
         <div className="relative z-10">
-          <p className="text-xs sm:text-sm font-semibold text-slate-700 mb-1">Important Note</p>
+          <p className="text-xs sm:text-sm font-semibold text-slate-700 mb-1">{t(language, 'importantNote')}</p>
           <p className="text-xs sm:text-sm text-slate-600 font-body">
             {result.disclaimer || "Doclyst does not provide medical advice. This explanation is for informational purposes only. Always consult with a healthcare professional."}
           </p>
@@ -224,7 +341,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ result }) => {
           className="group flex items-center justify-center gap-2 sm:gap-3 bg-gradient-to-r from-slate-800 to-slate-700 hover:from-slate-700 hover:to-slate-600 text-white font-bold py-3 sm:py-4 px-6 sm:px-10 rounded-full shadow-xl shadow-slate-300 transition-all transform hover:scale-105 active:scale-95 text-sm sm:text-base"
         >
           <Download size={18} className="sm:w-5 sm:h-5 group-hover:animate-bounce" />
-          Download Summary
+          {t(language, 'downloadSummary')}
         </button>
       </div>
     </div>
