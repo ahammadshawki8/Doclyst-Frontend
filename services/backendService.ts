@@ -1,7 +1,7 @@
 import { AnalysisResult, ReportStatus } from "../types";
 
 // @ts-ignore - Vite env
-const BACKEND_URL = (import.meta as any).env?.VITE_BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL = (import.meta as any).env?.VITE_BACKEND_URL || 'https://doclyst-backend.onrender.com';
 
 export const analyzeWithBackend = async (files: File[]): Promise<AnalysisResult> => {
   try {
