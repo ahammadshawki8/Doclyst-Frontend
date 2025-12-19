@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AppState, AppStep } from './types';
-import { analyzeMedicalReport } from './services/geminiService';
+import { analyzeWithBackend } from './services/backendService';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import LandingPage from './pages/LandingPage';
@@ -31,7 +31,7 @@ function App() {
     }));
 
     try {
-      const result = await analyzeMedicalReport(files);
+      const result = await analyzeWithBackend(files);
       setState(prev => ({
         ...prev,
         analysis: result,

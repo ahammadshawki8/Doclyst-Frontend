@@ -13,13 +13,22 @@ export function generatePDF(result: AnalysisResult): void {
   const textMuted: [number, number, number] = [100, 116, 139];
   const primaryColor: [number, number, number] = [20, 184, 166];
 
-  // Header
+  // Header - Logo with medical cross icon
+  // Draw a rounded rectangle as logo background
   doc.setFillColor(...primaryColor);
-  doc.rect(margin, yPos, 8, 8, 'F');
-  doc.setTextColor(...textDark);
-  doc.setFontSize(18);
+  doc.roundedRect(margin, yPos - 2, 12, 12, 2, 2, 'F');
+  
+  // Draw medical cross inside
+  doc.setDrawColor(255, 255, 255);
+  doc.setLineWidth(1.5);
+  doc.line(margin + 6, yPos + 1, margin + 6, yPos + 7); // vertical
+  doc.line(margin + 3, yPos + 4, margin + 9, yPos + 4); // horizontal
+  
+  // Brand name
+  doc.setTextColor(...primaryColor);
+  doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
-  doc.text('Doclyst', margin + 12, yPos + 6);
+  doc.text('Doclyst', margin + 16, yPos + 7);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
