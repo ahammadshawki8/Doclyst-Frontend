@@ -1,4 +1,4 @@
-# 🏥 Doclyst — Medical Report Simplified
+# 🏥 Doclyst - Medical Report Simplified
 
 > Doclyst turns complex medical reports into clear, human-readable explanations with safety alerts in under 30 seconds.
 
