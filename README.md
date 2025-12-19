@@ -1,17 +1,17 @@
 # 🏥 Doclyst — Medical Report Simplified
 
-> Doclyst turns complex medical reports into clear, human-readable explanations with safety alerts — in under 30 seconds.
+> Doclyst turns complex medical reports into clear, human-readable explanations with safety alerts in under 30 seconds.
 
 ## 🎯 What is Doclyst?
 
 Doclyst helps patients understand their medical reports without panic. It translates complex medical jargon into simple, friendly language and flags when a doctor consultation is needed.
 
-**This is NOT:**
+**This Is NOT:**
 - A diagnosis app
 - A health tracker
 - A hospital system
 
-**This IS:**
+**This Is:**
 - A report simplifier
 - A clarity tool
 - A bridge to better doctor conversations
@@ -148,16 +148,6 @@ npm run preview
 
 Doclyst does **NOT** provide medical advice. All explanations are for informational purposes only. Users should always consult healthcare professionals for medical decisions.
 
-## 🚫 Out of Scope
-
-These features are intentionally excluded to keep the app focused and safe:
-
-- ❌ User accounts
-- ❌ History tracking
-- ❌ Health tips
-- ❌ Medicine suggestions
-- ❌ Chatbot mode
-- ❌ Diagnosis prediction
 
 ## 📄 License
 
@@ -169,4 +159,4 @@ Contributions are welcome! Please read our contributing guidelines before submit
 
 ---
 
-Built with ❤️ for hackathon — Making healthcare information accessible to everyone.
+Built with ❤️ for ERNIE AI Developer Challenge - Making healthcare information accessible to everyone.
