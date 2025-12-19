@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle, AlertCircle, Download, Sparkles, Shield, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { CheckCircle, AlertCircle, Download, Sparkles, Shield, TrendingUp, TrendingDown, Minus, XCircle, ArrowRight, HelpCircle } from 'lucide-react';
 import { ReportStatus, AnalysisResult } from '../types';
 import Mascot from '../components/Mascot';
 import { generatePDF } from '../services/pdfGenerator';
@@ -143,14 +143,74 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ result }) => {
         </div>
       </section>
 
+      {/* Anti-Panic Section: What This Does NOT Mean */}
+      {result.doesNotMean && result.doesNotMean.length > 0 && (
+        <section className="mb-6 sm:mb-10">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4 ml-1 sm:ml-2">
+            <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-rose-400" />
+            <h3 className="text-slate-800 font-bold text-lg sm:text-xl">What This Does NOT Mean</h3>
+          </div>
+          <div className="bg-gradient-to-br from-rose-50 to-orange-50 border border-rose-100 p-5 sm:p-6 rounded-2xl sm:rounded-[2rem]">
+            <ul className="space-y-3">
+              {result.doesNotMean.map((item, idx) => (
+                <li key={idx} className="flex items-start gap-3">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-white border border-rose-200 flex items-center justify-center text-rose-500 text-sm font-bold">✗</span>
+                  <span className="text-slate-700 font-body text-sm sm:text-base">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
+
+      {/* Anti-Panic Section: What You Should Do Next */}
+      {result.nextSteps && result.nextSteps.length > 0 && (
+        <section className="mb-6 sm:mb-10">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4 ml-1 sm:ml-2">
+            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-mint-500" />
+            <h3 className="text-slate-800 font-bold text-lg sm:text-xl">What You Should Do Next</h3>
+          </div>
+          <div className="bg-gradient-to-br from-mint-50 to-emerald-50 border border-mint-100 p-5 sm:p-6 rounded-2xl sm:rounded-[2rem]">
+            <ul className="space-y-3">
+              {result.nextSteps.map((step, idx) => (
+                <li key={idx} className="flex items-start gap-3">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-mint-500 text-white flex items-center justify-center text-sm font-bold">{idx + 1}</span>
+                  <span className="text-slate-700 font-body text-sm sm:text-base">{step}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
+
+      {/* Anti-Panic Section: Questions to Ask Your Doctor */}
+      {result.doctorQuestions && result.doctorQuestions.length > 0 && (
+        <section className="mb-6 sm:mb-10">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4 ml-1 sm:ml-2">
+            <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 text-lavender-500" />
+            <h3 className="text-slate-800 font-bold text-lg sm:text-xl">Questions to Ask Your Doctor</h3>
+          </div>
+          <div className="bg-gradient-to-br from-lavender-50 to-purple-50 border border-lavender-100 p-5 sm:p-6 rounded-2xl sm:rounded-[2rem]">
+            <ul className="space-y-3">
+              {result.doctorQuestions.map((question, idx) => (
+                <li key={idx} className="flex items-start gap-3">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-lavender-500 text-white flex items-center justify-center text-sm font-bold">?</span>
+                  <span className="text-slate-700 font-body text-sm sm:text-base">{question}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
+
       {/* Disclaimer */}
-      <div className="relative bg-gradient-to-r from-lavender-50 to-purple-50 border border-lavender-200 p-4 sm:p-5 rounded-xl sm:rounded-2xl mb-6 sm:mb-10 flex items-start gap-3 sm:gap-4 overflow-hidden">
-        <div className="absolute top-0 right-0 w-24 sm:w-32 h-24 sm:h-32 bg-lavender-100/50 rounded-full blur-2xl"></div>
-        <div className="p-1.5 sm:p-2 bg-lavender-100 rounded-lg flex-shrink-0">
-          <AlertCircle className="text-lavender-500 w-4 h-4 sm:w-5 sm:h-5" />
+      <div className="relative bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200 p-4 sm:p-5 rounded-xl sm:rounded-2xl mb-6 sm:mb-10 flex items-start gap-3 sm:gap-4 overflow-hidden">
+        <div className="absolute top-0 right-0 w-24 sm:w-32 h-24 sm:h-32 bg-slate-100/50 rounded-full blur-2xl"></div>
+        <div className="p-1.5 sm:p-2 bg-slate-200 rounded-lg flex-shrink-0">
+          <AlertCircle className="text-slate-500 w-4 h-4 sm:w-5 sm:h-5" />
         </div>
         <div className="relative z-10">
-          <p className="text-xs sm:text-sm font-semibold text-lavender-700 mb-1">Important Note</p>
+          <p className="text-xs sm:text-sm font-semibold text-slate-700 mb-1">Important Note</p>
           <p className="text-xs sm:text-sm text-slate-600 font-body">
             {result.disclaimer || "Doclyst does not provide medical advice. This explanation is for informational purposes only. Always consult with a healthcare professional."}
           </p>

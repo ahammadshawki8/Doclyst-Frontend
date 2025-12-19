@@ -35,7 +35,11 @@ export const analyzeWithBackend = async (files: File[]): Promise<AnalysisResult>
         explanation: test.explanation,
         status: test.status as 'normal' | 'warning' | 'alert'
       })),
-      disclaimer: result.disclaimer
+      disclaimer: result.disclaimer,
+      // Anti-panic content
+      doesNotMean: result.doesNotMean || [],
+      nextSteps: result.nextSteps || [],
+      doctorQuestions: result.doctorQuestions || []
     };
     
   } catch (error) {

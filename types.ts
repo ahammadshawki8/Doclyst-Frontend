@@ -24,6 +24,10 @@ export interface AnalysisResult {
   summary: string;
   tests: TestItem[];
   disclaimer: string;
+  // Anti-panic content
+  doesNotMean: string[];
+  nextSteps: string[];
+  doctorQuestions: string[];
 }
 
 export interface AppState {
