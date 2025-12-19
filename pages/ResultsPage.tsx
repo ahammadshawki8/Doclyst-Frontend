@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { CheckCircle, AlertCircle, Download, Sparkles, Shield, TrendingUp, TrendingDown, Minus, XCircle, ArrowRight, HelpCircle, GitCompare, Volume2, VolumeX } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { CheckCircle, AlertCircle, Download, Sparkles, Shield, TrendingUp, TrendingDown, Minus, XCircle, ArrowRight, HelpCircle, GitCompare, Volume2, VolumeX, Loader2 } from 'lucide-react';
 import { ReportStatus, AnalysisResult, ComparisonItem, Language } from '../types';
 import Mascot from '../components/Mascot';
 import { generatePDF } from '../services/pdfGenerator';
@@ -13,10 +13,14 @@ interface ResultsPageProps {
 
 const ResultsPage: React.FC<ResultsPageProps> = ({ result, language }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     // Set up TTS callbacks
-    ttsPlayer.onEnd(() => setIsSpeaking(false));
+    ttsPlayer.onEnd(() => {
+      setIsSpeaking(false);
+      setIsLoading(false);
+    });
     
     return () => {
       ttsPlayer.stop();
@@ -24,9 +28,10 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ result, language }) => {
   }, []);
 
   const speakResults = async () => {
-    if (isSpeaking) {
+    if (isSpeaking || isLoading) {
       ttsPlayer.stop();
       setIsSpeaking(false);
+      setIsLoading(false);
       return;
     }
 
@@ -59,13 +64,16 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ result, language }) => {
     }
 
     const fullText = textParts.join('. ');
-    setIsSpeaking(true);
+    setIsLoading(true);
     
     try {
       await ttsPlayer.speak(fullText, language);
+      setIsLoading(false);
+      setIsSpeaking(true);
     } catch (error) {
       console.error('TTS error:', error);
       setIsSpeaking(false);
+      setIsLoading(false);
     }
   };
 
@@ -396,13 +404,21 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ result, language }) => {
       <div className="flex justify-center gap-3 sm:gap-4 flex-wrap">
         <button 
           onClick={speakResults}
+          disabled={isLoading}
           className={`group flex items-center justify-center gap-2 sm:gap-3 font-bold py-3 sm:py-4 px-6 sm:px-10 rounded-full shadow-xl transition-all transform hover:scale-105 active:scale-95 text-sm sm:text-base ${
-            isSpeaking 
-              ? 'bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white shadow-rose-200' 
-              : 'bg-gradient-to-r from-mint-500 to-mint-400 hover:from-mint-600 hover:to-mint-500 text-white shadow-mint-200'
+            isLoading
+              ? 'bg-gradient-to-r from-amber-500 to-amber-400 text-white shadow-amber-200 cursor-wait'
+              : isSpeaking 
+                ? 'bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white shadow-rose-200' 
+                : 'bg-gradient-to-r from-mint-500 to-mint-400 hover:from-mint-600 hover:to-mint-500 text-white shadow-mint-200'
           }`}
         >
-          {isSpeaking ? (
+          {isLoading ? (
+            <>
+              <Loader2 size={18} className="sm:w-5 sm:h-5 animate-spin" />
+              {t(language, 'loading')}
+            </>
+          ) : isSpeaking ? (
             <>
               <VolumeX size={18} className="sm:w-5 sm:h-5" />
               {t(language, 'stopReading')}
