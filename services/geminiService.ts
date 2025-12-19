@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { AnalysisResult, ReportStatus } from "../types";
 
 const processFileToBase64 = (file: File): Promise<string> => {
@@ -6,7 +6,6 @@ const processFileToBase64 = (file: File): Promise<string> => {
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result as string;
-      // Remove the Data-URI prefix to get just the base64 string
       const base64 = result.split(',')[1];
       resolve(base64);
     };
@@ -15,90 +14,92 @@ const processFileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-export const analyzeMedicalReport = async (file: File): Promise<AnalysisResult> => {
+export const analyzeMedicalReport = async (files: File[]): Promise<AnalysisResult> => {
   try {
     const apiKey = process.env.API_KEY;
     if (!apiKey) {
-        // Fallback for demo purposes if no API key is set in environment (dev mode safety)
-        // In a real production app, this would throw an error.
-        console.warn("No API Key found. Returning demo data.");
-        await new Promise(resolve => setTimeout(resolve, 3000)); // Simulate delay
-        return getMockData();
+      console.warn("No API Key found. Returning demo data.");
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      return getMockData();
     }
 
-    const ai = new GoogleGenAI({ apiKey });
-    const base64Data = await processFileToBase64(file);
+    const genAI = new GoogleGenerativeAI(apiKey);
     
-    // Using gemini-3-flash-preview as it is good for reasoning and text extraction tasks
-    const model = "gemini-3-flash-preview";
-
-    const prompt = `
-      You are Doclyst, a reassuring, calm, and friendly medical assistant. 
-      Analyze the attached medical report image.
-      
-      Your goal is to simplify the medical jargon into plain, comforting English.
-      
-      IMPORTANT:
-      1. Determine the overall status: 
-         - NORMAL (Everything looks good)
-         - ATTENTION (Some values are off, but not critical)
-         - URGENT (Immediate doctor visit recommended)
-      2. Write a "Simple Summary" paragraph. It should be warm, human, and easy to understand (5th-grade reading level).
-      3. Extract key test items. For each item, provide the name, the value found, the normal range, and a 1-sentence simple explanation.
-      4. If the image is not a medical report, return a polite error in the summary explaining you can only read medical reports.
-    `;
-
-    const response = await ai.models.generateContent({
-      model: model,
-      contents: {
-        parts: [
-          { inlineData: { mimeType: file.type, data: base64Data } },
-          { text: prompt }
-        ]
-      },
-      config: {
+    // Process all files to base64
+    const fileDataPromises = files.map(async (file) => ({
+      inlineData: {
+        mimeType: file.type,
+        data: await processFileToBase64(file)
+      }
+    }));
+    const fileData = await Promise.all(fileDataPromises);
+    
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      generationConfig: {
         responseMimeType: "application/json",
         responseSchema: {
-          type: Type.OBJECT,
+          type: SchemaType.OBJECT,
           properties: {
-            overallStatus: { type: Type.STRING, enum: ["NORMAL", "ATTENTION", "URGENT"] },
-            summary: { type: Type.STRING },
+            overallStatus: { type: SchemaType.STRING, enum: ["NORMAL", "ATTENTION", "URGENT"] },
+            summary: { type: SchemaType.STRING },
             tests: {
-              type: Type.ARRAY,
+              type: SchemaType.ARRAY,
               items: {
-                type: Type.OBJECT,
+                type: SchemaType.OBJECT,
                 properties: {
-                  name: { type: Type.STRING },
-                  value: { type: Type.STRING },
-                  range: { type: Type.STRING },
-                  explanation: { type: Type.STRING },
-                  status: { type: Type.STRING, enum: ["normal", "warning", "alert"] }
+                  name: { type: SchemaType.STRING },
+                  value: { type: SchemaType.STRING },
+                  range: { type: SchemaType.STRING },
+                  explanation: { type: SchemaType.STRING },
+                  status: { type: SchemaType.STRING, enum: ["normal", "warning", "alert"] }
                 }
               }
             },
-            disclaimer: { type: Type.STRING }
+            disclaimer: { type: SchemaType.STRING }
           }
         }
       }
     });
 
-    const text = response.text;
+    const prompt = `
+      You are Doclyst, a reassuring, calm, and friendly medical assistant. 
+      Analyze ALL the attached medical report images/pages together as one complete report.
+      
+      Your goal is to simplify the medical jargon into plain, comforting English.
+      
+      IMPORTANT:
+      1. Analyze all ${files.length} page(s) together to get the complete picture.
+      2. Determine the overall status: 
+         - NORMAL (Everything looks good)
+         - ATTENTION (Some values are off, but not critical)
+         - URGENT (Immediate doctor visit recommended)
+      3. Write a "Simple Summary" paragraph. It should be warm, human, and easy to understand (5th-grade reading level).
+      4. Extract ALL key test items from ALL pages. For each item, provide the name, the value found, the normal range, and a 1-sentence simple explanation.
+      5. If the images are not medical reports, return a polite error in the summary explaining you can only read medical reports.
+    `;
+
+    const response = await model.generateContent([
+      ...fileData,
+      prompt
+    ]);
+
+    const text = response.response.text();
     if (!text) throw new Error("No response from AI");
     
     const result = JSON.parse(text) as AnalysisResult;
     
-    // Ensure we map the enum correctly just in case
     return {
-        ...result,
-        overallStatus: result.overallStatus as ReportStatus || ReportStatus.ATTENTION
+      ...result,
+      overallStatus: result.overallStatus as ReportStatus || ReportStatus.ATTENTION
     };
 
   } catch (error) {
     console.error("Analysis failed", error);
-    // Return a safe fallback error state or throw
-    throw new Error("We couldn't read that file. Please try a clearer image.");
+    throw new Error("We couldn't read those files. Please try clearer images.");
   }
 };
+
 
 // Mock data for fallback or testing without API key
 const getMockData = (): AnalysisResult => ({
