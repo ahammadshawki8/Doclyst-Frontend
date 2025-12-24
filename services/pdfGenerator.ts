@@ -1,7 +1,52 @@
 import { jsPDF } from 'jspdf';
 import { AnalysisResult, ReportStatus } from '../types';
 
-export function generatePDF(result: AnalysisResult): void {
+// Font URLs from Google Fonts CDN (base64 will be fetched)
+const FONT_URLS: Record<string, string> = {
+  // Noto Sans for Latin/Spanish/English
+  latin: 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans@5.0.0/files/noto-sans-latin-400-normal.woff',
+  // Noto Sans Bengali
+  bengali: 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-bengali@5.0.0/files/noto-sans-bengali-bengali-400-normal.woff',
+  // Noto Sans Devanagari for Hindi
+  hindi: 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-devanagari@5.0.0/files/noto-sans-devanagari-devanagari-400-normal.woff',
+  // Noto Sans SC for Chinese
+  chinese: 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5.0.0/files/noto-sans-sc-chinese-simplified-400-normal.woff',
+};
+
+// Detect language from text content
+function detectLanguage(text: string): string {
+  if (/[\u4e00-\u9fff]/.test(text)) return 'chinese';
+  if (/[\u0980-\u09FF]/.test(text)) return 'bengali';
+  if (/[\u0900-\u097F]/.test(text)) return 'hindi';
+  return 'latin';
+}
+
+// Convert array buffer to base64
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+// Load font and convert to base64
+async function loadFont(language: string): Promise<string | null> {
+  const url = FONT_URLS[language];
+  if (!url) return null;
+  
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const buffer = await response.arrayBuffer();
+    return arrayBufferToBase64(buffer);
+  } catch {
+    return null;
+  }
+}
+
+export async function generatePDF(result: AnalysisResult): Promise<void> {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -13,18 +58,46 @@ export function generatePDF(result: AnalysisResult): void {
   const textMuted: [number, number, number] = [100, 116, 139];
   const primaryColor: [number, number, number] = [20, 184, 166];
 
+  // Detect language from content
+  const sampleText = result.summary + (result.tests[0]?.explanation || '');
+  const language = detectLanguage(sampleText);
+  
+  // Load and register font
+  let fontLoaded = false;
+  if (language !== 'latin') {
+    const fontBase64 = await loadFont(language);
+    if (fontBase64) {
+      try {
+        const fontName = 'NotoSans' + language.charAt(0).toUpperCase() + language.slice(1);
+        doc.addFileToVFS(fontName + '.woff', fontBase64);
+        doc.addFont(fontName + '.woff', fontName, 'normal');
+        doc.setFont(fontName);
+        fontLoaded = true;
+      } catch {
+        fontLoaded = false;
+      }
+    }
+  }
+
+  // Helper to set font safely
+  const setFont = (style: 'normal' | 'bold') => {
+    if (fontLoaded) {
+      const fontName = 'NotoSans' + language.charAt(0).toUpperCase() + language.slice(1);
+      doc.setFont(fontName, style);
+    } else {
+      doc.setFont('helvetica', style);
+    }
+  };
+
   // Header - Logo with medical cross icon
-  // Draw a rounded rectangle as logo background
   doc.setFillColor(...primaryColor);
   doc.roundedRect(margin, yPos - 2, 12, 12, 2, 2, 'F');
   
-  // Draw medical cross inside
   doc.setDrawColor(255, 255, 255);
   doc.setLineWidth(1.5);
-  doc.line(margin + 6, yPos + 1, margin + 6, yPos + 7); // vertical
-  doc.line(margin + 3, yPos + 4, margin + 9, yPos + 4); // horizontal
+  doc.line(margin + 6, yPos + 1, margin + 6, yPos + 7);
+  doc.line(margin + 3, yPos + 4, margin + 9, yPos + 4);
   
-  // Brand name
   doc.setTextColor(...primaryColor);
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
@@ -67,15 +140,23 @@ export function generatePDF(result: AnalysisResult): void {
 
   // Summary
   doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
   doc.text('Summary', margin, yPos);
   yPos += 7;
 
-  doc.setFont('helvetica', 'normal');
+  setFont('normal');
   doc.setFontSize(10);
   doc.setTextColor(...textMuted);
-  const summaryLines = doc.splitTextToSize(result.summary, contentWidth);
-  doc.text(summaryLines, margin, yPos);
-  yPos += summaryLines.length * 5 + 15;
+  
+  try {
+    const summaryLines = doc.splitTextToSize(result.summary, contentWidth);
+    doc.text(summaryLines, margin, yPos);
+    yPos += summaryLines.length * 5 + 15;
+  } catch {
+    doc.setFont('helvetica', 'normal');
+    doc.text('[View in app for full content]', margin, yPos);
+    yPos += 20;
+  }
 
   // Test Results Header
   doc.setTextColor(...textDark);
@@ -96,7 +177,7 @@ export function generatePDF(result: AnalysisResult): void {
   yPos += 12;
 
   // Table rows
-  doc.setFont('helvetica', 'normal');
+  setFont('normal');
   result.tests.forEach((test) => {
     if (yPos > pageHeight - 50) {
       doc.addPage();
@@ -117,7 +198,9 @@ export function generatePDF(result: AnalysisResult): void {
         ? [245, 158, 11]
         : [239, 68, 68];
     doc.setTextColor(...statusColor);
+    doc.setFont('helvetica', 'normal');
     doc.text(statusText, margin + 145, yPos);
+    setFont('normal');
 
     yPos += 8;
   });
@@ -137,7 +220,7 @@ export function generatePDF(result: AnalysisResult): void {
   yPos += 8;
 
   doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
+  setFont('normal');
   result.tests.forEach((test) => {
     if (yPos > pageHeight - 30) {
       doc.addPage();
@@ -146,34 +229,41 @@ export function generatePDF(result: AnalysisResult): void {
     doc.setTextColor(...textDark);
     doc.setFont('helvetica', 'bold');
     doc.text(test.name + ':', margin, yPos);
-    doc.setFont('helvetica', 'normal');
+    setFont('normal');
     doc.setTextColor(...textMuted);
-    const expLines = doc.splitTextToSize(test.explanation, contentWidth);
-    doc.text(expLines, margin, yPos + 5);
-    yPos += 5 + expLines.length * 4 + 5;
+    try {
+      const expLines = doc.splitTextToSize(test.explanation, contentWidth);
+      doc.text(expLines, margin, yPos + 5);
+      yPos += 5 + expLines.length * 4 + 5;
+    } catch {
+      yPos += 10;
+    }
   });
 
-  // Comparison Results (if comparison mode)
+  // Comparison Results
   if (result.isComparison && result.comparison) {
     if (yPos > pageHeight - 50) {
       doc.addPage();
       yPos = margin;
     }
     yPos += 5;
-    doc.setTextColor(139, 92, 246); // purple
+    doc.setTextColor(139, 92, 246);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.text('Report Comparison', margin, yPos);
     yPos += 8;
 
-    // Comparison Summary
     if (result.comparison.comparisonSummary) {
       doc.setFontSize(9);
-      doc.setFont('helvetica', 'normal');
+      setFont('normal');
       doc.setTextColor(...textMuted);
-      const summLines = doc.splitTextToSize(result.comparison.comparisonSummary, contentWidth);
-      doc.text(summLines, margin, yPos);
-      yPos += summLines.length * 4 + 8;
+      try {
+        const summLines = doc.splitTextToSize(result.comparison.comparisonSummary, contentWidth);
+        doc.text(summLines, margin, yPos);
+        yPos += summLines.length * 4 + 8;
+      } catch {
+        yPos += 10;
+      }
     }
 
     // Improved
@@ -183,12 +273,12 @@ export function generatePDF(result: AnalysisResult): void {
       doc.setFont('helvetica', 'bold');
       doc.text('Improved (' + result.comparison.improved.length + ')', margin, yPos);
       yPos += 6;
-      doc.setFont('helvetica', 'normal');
+      setFont('normal');
       doc.setFontSize(8);
       result.comparison.improved.forEach((item) => {
         if (yPos > pageHeight - 20) { doc.addPage(); yPos = margin; }
         doc.setTextColor(...textDark);
-        doc.text(item.name + ': ' + item.oldValue + ' → ' + item.newValue, margin, yPos);
+        doc.text(item.name + ': ' + item.oldValue + ' -> ' + item.newValue, margin, yPos);
         yPos += 5;
       });
       yPos += 3;
@@ -202,12 +292,12 @@ export function generatePDF(result: AnalysisResult): void {
       doc.setFontSize(9);
       doc.text('Needs Attention (' + result.comparison.worsened.length + ')', margin, yPos);
       yPos += 6;
-      doc.setFont('helvetica', 'normal');
+      setFont('normal');
       doc.setFontSize(8);
       result.comparison.worsened.forEach((item) => {
         if (yPos > pageHeight - 20) { doc.addPage(); yPos = margin; }
         doc.setTextColor(...textDark);
-        doc.text(item.name + ': ' + item.oldValue + ' → ' + item.newValue, margin, yPos);
+        doc.text(item.name + ': ' + item.oldValue + ' -> ' + item.newValue, margin, yPos);
         yPos += 5;
       });
       yPos += 3;
@@ -221,7 +311,7 @@ export function generatePDF(result: AnalysisResult): void {
       doc.setFontSize(9);
       doc.text('Stable (' + result.comparison.stable.length + ')', margin, yPos);
       yPos += 6;
-      doc.setFont('helvetica', 'normal');
+      setFont('normal');
       doc.setFontSize(8);
       result.comparison.stable.forEach((item) => {
         if (yPos > pageHeight - 20) { doc.addPage(); yPos = margin; }
@@ -240,7 +330,7 @@ export function generatePDF(result: AnalysisResult): void {
       doc.setFontSize(9);
       doc.text('New Findings (' + result.comparison.newFindings.length + ')', margin, yPos);
       yPos += 6;
-      doc.setFont('helvetica', 'normal');
+      setFont('normal');
       doc.setFontSize(8);
       result.comparison.newFindings.forEach((item) => {
         if (yPos > pageHeight - 20) { doc.addPage(); yPos = margin; }
@@ -259,23 +349,27 @@ export function generatePDF(result: AnalysisResult): void {
       yPos = margin;
     }
     yPos += 5;
-    doc.setTextColor(239, 68, 68); // rose color
+    doc.setTextColor(239, 68, 68);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.text('What This Does NOT Mean', margin, yPos);
     yPos += 8;
 
     doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
+    setFont('normal');
     doc.setTextColor(...textMuted);
     result.doesNotMean.forEach((item) => {
       if (yPos > pageHeight - 20) {
         doc.addPage();
         yPos = margin;
       }
-      const lines = doc.splitTextToSize('• ' + item, contentWidth);
-      doc.text(lines, margin, yPos);
-      yPos += lines.length * 4 + 3;
+      try {
+        const lines = doc.splitTextToSize('- ' + item, contentWidth);
+        doc.text(lines, margin, yPos);
+        yPos += lines.length * 4 + 3;
+      } catch {
+        yPos += 5;
+      }
     });
   }
 
@@ -286,23 +380,27 @@ export function generatePDF(result: AnalysisResult): void {
       yPos = margin;
     }
     yPos += 5;
-    doc.setTextColor(16, 185, 129); // mint/green color
+    doc.setTextColor(16, 185, 129);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.text('What You Should Do Next', margin, yPos);
     yPos += 8;
 
     doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
+    setFont('normal');
     doc.setTextColor(...textMuted);
     result.nextSteps.forEach((step, idx) => {
       if (yPos > pageHeight - 20) {
         doc.addPage();
         yPos = margin;
       }
-      const lines = doc.splitTextToSize((idx + 1) + '. ' + step, contentWidth);
-      doc.text(lines, margin, yPos);
-      yPos += lines.length * 4 + 3;
+      try {
+        const lines = doc.splitTextToSize((idx + 1) + '. ' + step, contentWidth);
+        doc.text(lines, margin, yPos);
+        yPos += lines.length * 4 + 3;
+      } catch {
+        yPos += 5;
+      }
     });
   }
 
@@ -313,27 +411,29 @@ export function generatePDF(result: AnalysisResult): void {
       yPos = margin;
     }
     yPos += 5;
-    doc.setTextColor(139, 92, 246); // lavender/purple color
+    doc.setTextColor(139, 92, 246);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.text('Questions to Ask Your Doctor', margin, yPos);
     yPos += 8;
 
     doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
+    setFont('normal');
     doc.setTextColor(...textMuted);
     result.doctorQuestions.forEach((question) => {
       if (yPos > pageHeight - 20) {
         doc.addPage();
         yPos = margin;
       }
-      const lines = doc.splitTextToSize('? ' + question, contentWidth);
-      doc.text(lines, margin, yPos);
-      yPos += lines.length * 4 + 3;
+      try {
+        const lines = doc.splitTextToSize('- ' + question, contentWidth);
+        doc.text(lines, margin, yPos);
+        yPos += lines.length * 4 + 3;
+      } catch {
+        yPos += 5;
+      }
     });
   }
-
-  yPos += 5;
 
   // Footer
   const footerY = pageHeight - 15;
@@ -341,6 +441,7 @@ export function generatePDF(result: AnalysisResult): void {
   doc.line(margin, footerY - 8, pageWidth - margin, footerY - 8);
   doc.setTextColor(...textMuted);
   doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
   doc.text(
     'This report is for informational purposes only and does not constitute medical advice.',
     margin,

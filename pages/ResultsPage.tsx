@@ -14,6 +14,7 @@ interface ResultsPageProps {
 const ResultsPage: React.FC<ResultsPageProps> = ({ result, language }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
 
   useEffect(() => {
     // Set up TTS callbacks
@@ -431,11 +432,28 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ result, language }) => {
           )}
         </button>
         <button 
-          onClick={() => generatePDF(result)}
-          className="group flex items-center justify-center gap-2 sm:gap-3 bg-gradient-to-r from-slate-800 to-slate-700 hover:from-slate-700 hover:to-slate-600 text-white font-bold py-3 sm:py-4 px-6 sm:px-10 rounded-full shadow-xl shadow-slate-300 transition-all transform hover:scale-105 active:scale-95 text-sm sm:text-base"
+          onClick={async () => {
+            setIsPdfLoading(true);
+            try {
+              await generatePDF(result);
+            } finally {
+              setIsPdfLoading(false);
+            }
+          }}
+          disabled={isPdfLoading}
+          className="group flex items-center justify-center gap-2 sm:gap-3 bg-gradient-to-r from-slate-800 to-slate-700 hover:from-slate-700 hover:to-slate-600 text-white font-bold py-3 sm:py-4 px-6 sm:px-10 rounded-full shadow-xl shadow-slate-300 transition-all transform hover:scale-105 active:scale-95 text-sm sm:text-base disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
         >
-          <Download size={18} className="sm:w-5 sm:h-5 group-hover:animate-bounce" />
-          {t(language, 'downloadSummary')}
+          {isPdfLoading ? (
+            <>
+              <Loader2 size={18} className="sm:w-5 sm:h-5 animate-spin" />
+              {t(language, 'loading')}
+            </>
+          ) : (
+            <>
+              <Download size={18} className="sm:w-5 sm:h-5 group-hover:animate-bounce" />
+              {t(language, 'downloadSummary')}
+            </>
+          )}
         </button>
       </div>
     </div>
