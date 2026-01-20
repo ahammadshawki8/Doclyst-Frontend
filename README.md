@@ -39,9 +39,11 @@ Simple. Linear. No accounts. No dashboards.
 - **React 18** — UI framework
 - **TypeScript** — Type safety
 - **Vite** — Build tool & dev server
-- **Tailwind CSS** — Styling (via CDN)
-- **Lucide React** — Icons
-- **Google Generative AI** — Medical report analysis
+- **Tailwind CSS** — Styling
+- **PaddleOCR** — OCR text extraction
+- **OCR Space** — Alternative OCR service
+- **ERNIE** — Large language model
+- **Groq** — LLM inference
 - **jsPDF** — PDF generation
 
 ## 📁 Project Structure
@@ -159,4 +161,4 @@ Contributions are welcome! Please read our contributing guidelines before submit
 
 ---
 
-Built with ❤️ for ERNIE AI Developer Challenge - Making healthcare information accessible to everyone.
+Built with ❤️ — Making healthcare information accessible to everyone.
